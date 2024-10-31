@@ -89,20 +89,11 @@ def xyz_to_uv(equatorial_xyz_data, H0, delta):
         uvw_coords.append((u, v, w))
     return uvw_coords
 
-def gaussian_2d(shape, center, sigma):
-    """
-    Generates a 2D circular Gaussian distribution.
-
-    Parameters:
-    shape (tuple): Shape of the 2D grid (height, width).
-    center (tuple): Coordinates of the center of the Gaussian (y, x).
-    sigma (float): Standard deviation of the Gaussian.
-
-    Returns:
-    numpy.ndarray: 2D array with the Gaussian distribution.
-    """
-    y, x = np.indices(shape)
+def gaussian_2d_movable(shape, center, sigma):
+    # Create a symmetric grid centered around (0, 0)
+    y, x = np.ogrid[-shape[0]//2:shape[0]//2, -shape[1]//2:shape[1]//2]
     y0, x0 = center
+    # Calculate the Gaussian based on the specified center
     gaussian = np.exp(-((x - x0)**2 + (y - y0)**2) / (2 * sigma**2))
     return gaussian
 
@@ -141,7 +132,7 @@ plt.grid(True)
 plt.show()
 
 #Definimos las frecuencias de alma en banda 4
-f_c = np.array(np.linspace(125/c,163/c,10))
+f_c = np.array(np.linspace(125/c,163/c,2))
 
 #converimos a visiblidades sub lambda
 ulambda = []
@@ -152,13 +143,17 @@ for uvw in uvw_coords:
     vlambda.append(uvw[1] * f_c)
     wlambda.append(uvw[2] * f_c)
 
+ulambda = np.array(ulambda)
+vlambda = np.array(vlambda)
+wlambda = np.array(wlambda)
 # Graficar uv coverage
+
 plt.figure(figsize=(10, 10))
 plt.scatter(ulambda, vlambda, color="blue", s=10, label="Visibilities")
 plt.scatter([-u for u in ulambda], [-v for v in vlambda], color="red", s=10, label="Conjugate Visibilities")
-plt.xlabel("u (lambda)")
-plt.ylabel("v (lambda)")
-plt.title("UV Coverage Plot")
+plt.xlabel("u (λ)")
+plt.ylabel("v (λ)")
+plt.title("UV Coverage Plot (λ)")
 plt.axhline(0, color='black', linewidth=0.5)
 plt.axvline(0, color='black', linewidth=0.5)
 plt.legend()
@@ -173,22 +168,44 @@ m = np.linspace(-1,1,100)
 S0= 1
 
 
-# Example usage
-shape = (100, 100)  # Size of the grid
-center = (50, 50)   # Center of the Gaussian
-sigma = 10          # Standard deviation
+# ejemplo de uso
+shape = (100, 100)       # Size of the grid
+center = (0, 0)          # Offset center for the Gaussian
+sigma = 10               # Standard deviation
 
-gaussian = gaussian_2d(shape, center, sigma)
+gaussian = gaussian_2d_movable(shape, center, sigma)
 
-# Plotting the Gaussian for visualization
-plt.imshow(gaussian, origin='lower', cmap='viridis')
+# graaficar para demostrar uso
+plt.imshow(gaussian, origin='lower', extent=(-shape[1]//2, shape[1]//2, -shape[0]//2, shape[0]//2), cmap='viridis')
 plt.colorbar()
-plt.title("2D Circular Gaussian Distribution")
+plt.title("Movable 2D Circular Gaussian Distribution")
+plt.xlabel("X-axis")
+plt.ylabel("Y-axis")
 plt.show()
 
+print(len(ulambda.flatten()))
 
-print(np.e)
+#calcualmos las visbilidades
+#definimos el l, m y S0
+l=0
+m = 0
+S0= 1
 
+#definimos la visibilidad
+
+V = (gaussian_2d_movable((len(ulambda.flatten()),len(ulambda.flatten())),(l,m),10) * (S0/(1-l**2-m**2))) * (np.e**(2*np.pi*(ulambda.flatten()*l + vlambda.flatten()*m)))
+
+# Graficar visibilidad
+plt.figure(figsize=(10, 10))
+plt.scatter(ulambda.flatten(), vlambda.flatten(), c=np.abs(V), cmap="viridis", s=10)
+plt.colorbar(label="Amplitude")
+plt.xlabel("u (λ)")
+plt.ylabel("v (λ)")
+plt.title("Visibilities for a Point Source")
+plt.axhline(0, color='black', linewidth=0.5)
+plt.axvline(0, color='black', linewidth=0.5)
+plt.grid(True)
+plt.show()
 
 #PARTE2: Grilla de la UV coverage
 """
