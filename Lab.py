@@ -11,6 +11,8 @@ from astropy.time import Time
 from astropy import units as u
 import matplotlib.pyplot as plt
 import math
+
+
 #Funcion para leer archivo de configuracion de antenas ENU
 def read_antenna_data(file_path):
     antennas = []
@@ -78,43 +80,40 @@ def az_el_to_equatorial_xyz(az_el_data, lat):
 
 #Funcion para convertir coordenadas XYZ a UV
 def xyz_to_uv(equatorial_xyz_data, H0, delta):
-    uv_coords = []
+    uvw_coords = []
     for data in equatorial_xyz_data:
         # Convertir a coordenadas UV
         u = data['x']*math.sin(H0) + data['y']*math.cos(H0)
         v = -data['x']*math.sin(delta)*math.cos(H0) + data['y']*math.sin(delta)*math.sin(H0) + data['z']*math.cos(delta)
-        uv_coords.append((u, v))
-    return uv_coords
+        w = data['x']*math.cos(delta)*math.cos(H0) - data['y']*math.cos(delta)*math.sin(H0) + data['z']*math.sin(delta)
+        uvw_coords.append((u, v, w))
+    return uvw_coords
 
 #PARTE1: uv coverage
 
 #----------------Convertir Coordenadas
 # Leer archivo de configuración de antenas
 antenas = read_antenna_data('C:/Users/david/OneDrive/Desktop/Universidad/Semestre 12/Interferometria/LAB/Lab_Interferometria/alma.cycle8.6.cfg')
-print(antenas)
 # Convertir coordenadas ENU a Azimuth y Altitud
 az_el_data = enu_to_altaz(antenas)
-print(az_el_data)
 # Definir la ubicación de ALMA
 Alma = EarthLocation.of_site('ALMA')
-print(Alma)
 
 # Convertir Azimuth y Altitud a coordenadas Ecuatoriales y XYZ
 ec_xyz_data = az_el_to_equatorial_xyz(az_el_data, Alma.lat.deg)
-print(ec_xyz_data)
 
 # Convertir coordenadas ecuatoriales a coordenadas UV
 HA= np.linspace(0, 2*np.pi, 100)
-uv_coords = []
+uvw_coords = []
 for i in range(len(HA)):
-    uv_coords.extend(xyz_to_uv(ec_xyz_data, HA[i], 1))
+    uvw_coords.extend(xyz_to_uv(ec_xyz_data, HA[i], np.pi/4))
 
-print(uv_coords)
 # Graficar uv coverage
-uv_coords = np.array(uv_coords)
+uvw_coords = np.array(uvw_coords)
+
 plt.figure(figsize=(10, 10))
-plt.scatter(uv_coords[:, 0], uv_coords[:, 1], color="blue", s=10, label="Visibilities")
-plt.scatter([-u for u in uv_coords[:, 0]], [-v for v in uv_coords[:, 1]], color="red", s=10, label="Conjugate Visibilities")
+plt.scatter(uvw_coords[:, 0], uvw_coords[:, 1], color="blue", s=10, label="Visibilities")
+plt.scatter([-u for u in uvw_coords[:, 0]], [-v for v in uvw_coords[:, 1]], color="red", s=10, label="Conjugate Visibilities")
 plt.xlabel("u (meters)")
 plt.ylabel("v (meters)")
 plt.title("UV Coverage Plot")
@@ -124,8 +123,39 @@ plt.legend()
 plt.grid(True)
 plt.show()
 
-#PARTE2: Grilla de la UV coverage
+#Definimos las frecuencias de alma en banda 4
+f_c = np.array(np.linspace(125/c,163/c,10))
 
+#converimos a visiblidades sub lambda
+ulambda = []
+vlambda = []
+wlambda = []
+for uvw in uvw_coords:
+    ulambda.append((uvw[0] * f_c))
+    vlambda.append(uvw[1] * f_c)
+    wlambda.append(uvw[2] * f_c)
+
+# Graficar uv coverage
+plt.figure(figsize=(10, 10))
+plt.scatter(ulambda, vlambda, color="blue", s=10, label="Visibilities")
+plt.scatter([-u for u in ulambda], [-v for v in vlambda], color="red", s=10, label="Conjugate Visibilities")
+plt.xlabel("u (lambda)")
+plt.ylabel("v (lambda)")
+plt.title("UV Coverage Plot")
+plt.axhline(0, color='black', linewidth=0.5)
+plt.axvline(0, color='black', linewidth=0.5)
+plt.legend()
+plt.grid(True)
+plt.show()
+
+#PARTE 1.1: FUENTE PUNTUAL
+
+#definimos el l y m
+l = np.linspace(-1,1,100)
+m = np.linspace(-1,1,100)
+
+#PARTE2: Grilla de la UV coverage
+"""
 # Definir el tamaño del grid (por ejemplo, 256x256)
 grid_size = 256
 
@@ -152,7 +182,7 @@ plt.show()
 
 #PARTE3: Primary Beam
 
-"""
+
 el primary beam es la respuesta de un telescopio a una fuente puntual en el cielo, es decir, la respuesta del telescopio a una fuente puntual en el cielo.
 en este caso sera cero ya que 
 """
