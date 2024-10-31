@@ -89,6 +89,23 @@ def xyz_to_uv(equatorial_xyz_data, H0, delta):
         uvw_coords.append((u, v, w))
     return uvw_coords
 
+def gaussian_2d(shape, center, sigma):
+    """
+    Generates a 2D circular Gaussian distribution.
+
+    Parameters:
+    shape (tuple): Shape of the 2D grid (height, width).
+    center (tuple): Coordinates of the center of the Gaussian (y, x).
+    sigma (float): Standard deviation of the Gaussian.
+
+    Returns:
+    numpy.ndarray: 2D array with the Gaussian distribution.
+    """
+    y, x = np.indices(shape)
+    y0, x0 = center
+    gaussian = np.exp(-((x - x0)**2 + (y - y0)**2) / (2 * sigma**2))
+    return gaussian
+
 #PARTE1: uv coverage
 
 #----------------Convertir Coordenadas
@@ -153,6 +170,25 @@ plt.show()
 #definimos el l y m
 l = np.linspace(-1,1,100)
 m = np.linspace(-1,1,100)
+S0= 1
+
+
+# Example usage
+shape = (100, 100)  # Size of the grid
+center = (50, 50)   # Center of the Gaussian
+sigma = 10          # Standard deviation
+
+gaussian = gaussian_2d(shape, center, sigma)
+
+# Plotting the Gaussian for visualization
+plt.imshow(gaussian, origin='lower', cmap='viridis')
+plt.colorbar()
+plt.title("2D Circular Gaussian Distribution")
+plt.show()
+
+
+print(np.e)
+
 
 #PARTE2: Grilla de la UV coverage
 """
